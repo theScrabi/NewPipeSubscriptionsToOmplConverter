@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:xml/xml.dart' as xml;
 
-xml.XmlDocument convert(Map<String, dynamic> npSubscriptionData) {
+xml.XmlDocument convert({required Map<String, dynamic> npSubscriptionData, String? baseRssURL}) {
   final List<dynamic> subscriptions = npSubscriptionData['subscriptions'] ?? [];
   final builder = xml.XmlBuilder();
+
+  final baseUrl = baseRssURL ?? 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 
   builder.processing('xml', 'version="1.0" encoding="UTF-8"');
 
@@ -26,7 +28,7 @@ xml.XmlDocument convert(Map<String, dynamic> npSubscriptionData) {
 
               if (channelId.isNotEmpty) {
                 final String xmlUrl =
-                    'https://www.youtube.com/feeds/videos.xml?channel_id=$channelId';
+                    '$baseUrl+$channelId';
 
                 builder.element('outline', attributes: {
                   'type': 'rss',

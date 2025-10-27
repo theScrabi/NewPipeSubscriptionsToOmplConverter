@@ -1,14 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:newpipe_converter/converter.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:xml/xml.dart' as xml;
+
+import 'converter.dart'; // Import the new converter file
 
 void main() {
   runApp(const ConverterApp());
@@ -87,7 +85,7 @@ class _HomePageState extends State<HomePage> {
       final Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
       // 2. Convert to OPML
-      final xml.XmlDocument opmlDoc = convert(jsonData);
+      final xml.XmlDocument opmlDoc = convert(npSubscriptionData:  jsonData);
       final String opmlString = opmlDoc.toXmlString(pretty: true, indent: '  ');
       final Uint8List opmlBytes = utf8.encode(opmlString);
 
@@ -98,32 +96,12 @@ class _HomePageState extends State<HomePage> {
         // Web: Trigger browser download
         final blob = html.Blob([opmlBytes], 'application/xml');
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
+        html.AnchorElement(href: url)
           ..setAttribute('download', fileName)
           ..click();
         html.Url.revokeObjectUrl(url);
-      } else if (Platform.isAndroid || Platform.isIOS) {
-        // Mobile: Use share sheet
-        final tempDir = await getTemporaryDirectory();
-        final filePath = '${tempDir.path}/$fileName';
-        final file = File(filePath);
-        await file.writeAsBytes(opmlBytes);
-        await Share.shareXFiles([XFile(filePath)], text: 'NewPipe OPML Export');
-      } else if (Platform.isMacOS ||
-          Platform.isLinux ||
-          Platform.isWindows) {
-        // Desktop: Open save file dialog
-        String? savePath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save OPML File',
-          fileName: fileName,
-          allowedExtensions: ['opml'],
-        );
-
-        if (savePath != null) {
-          final file = File(savePath);
-          await file.writeAsBytes(opmlBytes);
-          _showSnackBar('File saved to $savePath');
-        }
+      } else {
+        throw Exception('Platform is unsuported');
       }
     } catch (e) {
       _showSnackBar('Error during conversion or saving: $e', isError: true);
@@ -195,4 +173,5 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
 
