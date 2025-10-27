@@ -1,11 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:xml/xml.dart' as xml;
 
@@ -129,41 +125,16 @@ class _HomePageState extends State<HomePage> {
 
       const String fileName = 'newpipe_export.opml';
 
-      // 4. Save file based on platform
-      if (kIsWeb) {
-        // Web: Trigger browser download
-        final blob = html.Blob([opmlBytes], 'application/xml');
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        html.AnchorElement(href: url)
-          ..setAttribute('download', fileName)
-          ..click();
-        html.Url.revokeObjectUrl(url);
-      } else if (Platform.isAndroid || Platform.isIOS) {
-        // Mobile: Use share sheet
-        final tempDir = await getTemporaryDirectory();
-        final filePath = '${tempDir.path}/$fileName';
-        final file = File(filePath);
-        await file.writeAsBytes(opmlBytes);
-        await Share.shareXFiles([XFile(filePath)], text: 'NewPipe OPML Export');
-      } else if (Platform.isMacOS ||
-          Platform.isLinux ||
-          Platform.isWindows) {
-        // Desktop: Open save file dialog
-        String? savePath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save OPML File',
-          fileName: fileName,
-          allowedExtensions: ['opml'],
-        );
-
-        if (savePath != null) {
-          final file = File(savePath);
-          await file.writeAsBytes(opmlBytes);
-          _showSnackBar('File saved to $savePath');
-        }
-      }
+      // 4. Save file (Web only)
+      // Web: Trigger browser download
+      final blob = html.Blob([opmlBytes], 'application/xml');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
     } catch (e) {
       _showSnackBar('Error during conversion or saving: $e', isError: true);
-      debugPrint('Export Error: $e');
     }
 
     setState(() {
@@ -253,4 +224,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
