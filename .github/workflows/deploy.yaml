@@ -2,7 +2,7 @@ name: Deploy NewPipe Subscription Converter to GitHub Pages
 
 on:
   push:
-    branches: [ main ] 
+    branches: [ master ] 
 
 jobs:
   build-and-deploy:
