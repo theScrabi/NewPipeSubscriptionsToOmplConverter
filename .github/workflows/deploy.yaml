@@ -1,0 +1,42 @@
+name: Deploy NewPipe Subscription Converter to GitHub Pages
+
+on:
+  push:
+    branches: [ main ] 
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' 
+          flutter-version: '3.x' 
+
+      - name: Enable Flutter web
+        run: flutter config --enable-web
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Flutter web app
+        run: flutter build web --release --base-href /${{ github.event.repository.name }}/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          publish_branch: gh-pages
+          commit_message: 'Deploy NewPipe subscription converter app to GitHub Pages'
+          user_name: 'the-scrabi'
+          user_email: 'chris.schabesberger@mailbox.org'
+
