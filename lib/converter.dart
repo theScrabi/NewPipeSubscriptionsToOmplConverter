@@ -28,7 +28,7 @@ xml.XmlDocument convert({required Map<String, dynamic> npSubscriptionData, Strin
 
               if (channelId.isNotEmpty) {
                 final String xmlUrl =
-                    '$baseUrl+$channelId';
+                    '$baseUrl$channelId';
 
                 builder.element('outline', attributes: {
                   'type': 'rss',

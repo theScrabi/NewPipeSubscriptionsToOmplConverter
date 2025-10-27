@@ -42,17 +42,20 @@ class _HomePageState extends State<HomePage> {
   String _fileName = 'No file selected';
   Uint8List? _fileBytes;
   bool _isLoading = false;
-  late TextEditingController _baseUrlController;
+  bool _useRssBridge = false;
+  late TextEditingController _rssBridgeInstanceController;
 
   @override
   void initState() {
     super.initState();
-    _baseUrlController = TextEditingController();
+    // Initialize with the default RSS-Bridge instance
+    _rssBridgeInstanceController =
+        TextEditingController(text: 'https://rss-bridge.org/bridge01/');
   }
 
   @override
   void dispose() {
-    _baseUrlController.dispose();
+    _rssBridgeInstanceController.dispose();
     super.dispose();
   }
 
@@ -100,10 +103,25 @@ class _HomePageState extends State<HomePage> {
       final String jsonString = utf8.decode(_fileBytes!);
       final Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
-      // 2. Convert to OPML
-      final String baseUrl = _baseUrlController.text.trim();
-      final String? baseRssURL = baseUrl.isEmpty ? null : baseUrl;
+      // 2. Determine Base URL based on UI
+      String? baseRssURL; // Null by default, so converter uses its default
+      if (_useRssBridge) {
+        String instanceUrl = _rssBridgeInstanceController.text.trim();
+        if (instanceUrl.isEmpty) {
+          _showSnackBar('RSS-Bridge instance URL cannot be empty',
+              isError: true);
+          setState(() => _isLoading = false);
+          return;
+        }
+        if (!instanceUrl.endsWith('/')) {
+          instanceUrl = '$instanceUrl/';
+        }
+        // Construct the specific RSS-Bridge URL format, using Atom feed
+        baseRssURL =
+            '${instanceUrl}?action=display&bridge=YoutubeBridge&context=By+channel+id&format=Atom&c=';
+      }
 
+      // 3. Convert to OPML
       final xml.XmlDocument opmlDoc =
           convert(npSubscriptionData: jsonData, baseRssURL: baseRssURL);
       final String opmlString = opmlDoc.toXmlString(pretty: true, indent: '  ');
@@ -111,7 +129,7 @@ class _HomePageState extends State<HomePage> {
 
       const String fileName = 'newpipe_export.opml';
 
-      // 3. Save file based on platform
+      // 4. Save file based on platform
       if (kIsWeb) {
         // Web: Trigger browser download
         final blob = html.Blob([opmlBytes], 'application/xml');
@@ -187,18 +205,32 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               Text(_fileName, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 24),
-              TextField(
-                controller: _baseUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Optional: Base RSS URL',
-                  hintText:
-                      'e.g. https://www.youtube.com/feeds/videos.xml?channel_id=',
-                  border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                enabled: !_isLoading,
+              CheckboxListTile(
+                title: const Text('Use RSS-Bridge'),
+                value: _useRssBridge,
+                onChanged: _isLoading
+                    ? null
+                    : (bool? newValue) {
+                        setState(() {
+                          _useRssBridge = newValue ?? false;
+                        });
+                      },
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
               ),
+              if (_useRssBridge) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _rssBridgeInstanceController,
+                  decoration: const InputDecoration(
+                    labelText: 'RSS-Bridge Instance URL',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  enabled: !_isLoading,
+                ),
+              ],
               const SizedBox(height: 24),
               if (_isLoading)
                 const CircularProgressIndicator()
@@ -221,3 +253,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
